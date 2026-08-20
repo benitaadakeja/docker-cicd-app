@@ -42,6 +42,6 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          push: false
+          push: true
           tags: ghcr.io/${{ github.repository }}
 
