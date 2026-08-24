@@ -64,4 +64,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
             docker pull ghcr.io/benitaadakeja/docker-cicd-app:latest
+            docker stop docker-cicd-app || true
+            docker rm docker-cicd-app || true
+            docker run -d --name docker-cicd-app -p 5000:5000 ghcr.io/benitaadakeja/docker-cicd-app:latest
           "
