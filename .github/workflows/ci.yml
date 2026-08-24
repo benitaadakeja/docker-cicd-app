@@ -47,6 +47,7 @@ jobs:
 
   deploy:
     needs: test
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
