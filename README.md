@@ -97,6 +97,7 @@ The project demonstrates the progression from local development and containeriza
 ---
 
 ## 📁 Project Structure
+```text
 docker-cicd-app/
 │
 ├── .github/
@@ -131,7 +132,8 @@ docker-cicd-app/
 ├── Dockerfile
 ├── LICENSE
 ├── pytest.ini
-└── README.md```
+└── README.md
+```
 
 ---
 
