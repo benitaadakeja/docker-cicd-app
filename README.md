@@ -1,6 +1,6 @@
 # Docker CI/CD App
 
-A containerized Flask application with automated testing and a GitHub Actions CI/CD pipeline that builds and publishes Docker images to GitHub Container Registry (GHCR).
+A containerized Flask application with an automated CI/CD pipeline that tests, builds, publishes, and deploys Docker images from GitHub to an AWS EC2 instance.
 
 ![CI](https://github.com/benitaadakeja/docker-cicd-app/actions/workflows/ci.yml/badge.svg)
 
@@ -20,72 +20,82 @@ The application is:
 1. Developed with Flask
 2. Tested automatically with `pytest`
 3. Containerized with Docker
-4. Built automatically by GitHub Actions
+4. Built automatically using GitHub Actions
 5. Published to GitHub Container Registry (GHCR)
-6. Pulled back from GHCR and run as a Docker container
+6. Deployed to an AWS EC2 instance
+7. Automatically updated on EC2 whenever changes are successfully pushed through the CI/CD pipeline
 
-The project was built as part of my hands-on DevOps learning journey.
+The project demonstrates the progression from local development and containerization to a complete cloud deployment workflow, where a successful push to the `main` branch can automatically update the running application on AWS EC2.
 
 ---
 
 ## 🏗️ Architecture
-
 ```text
-                     Developer
-                         │
-                         │ git push
-                         ▼
-                  GitHub Repository
-                         │
-                         ▼
-                  GitHub Actions
-                         │
-              ┌──────────┴──────────┐
-              │                     │
-              ▼                     ▼
-        Run automated tests    Build Docker image
-              │                     │
-              └──────────┬──────────┘
-                         │
-                         ▼
-                Push image to GHCR
-                         │
-                         ▼
-              GitHub Container Registry
-                         │
-                         │ docker pull
-                         ▼
-                 Docker Container
-                         │
-                         ▼
-                   Flask App
-                    /       \
-                   /         \
-                  ▼           ▼
-                 /          /health
-```
-
+                         Developer
+                             │
+                             │ git push
+                             ▼
+                      GitHub Repository
+                             │
+                             ▼
+                      GitHub Actions
+                             │
+                             ▼
+                    Run automated tests
+                             │
+                      Tests must pass
+                             │
+                             ▼
+                     Build Docker image
+                             │
+                             ▼
+                       Push to GHCR
+                             │
+                             ▼
+                GitHub Container Registry
+                             │
+                             │ SSH deployment
+                             ▼
+                       AWS EC2 Instance
+                             │
+                             ▼
+                     Pull latest image
+                             │
+                             ▼
+                  Stop old container
+                             │
+                             ▼
+                 Remove old container
+                             │
+                             ▼
+                   Start new container
+                             │
+                             ▼
+                      Flask App :5000
+                             │
+                             ▼
+                         Internet
 ---
 
 ## 🛠️ Technologies Used
 
-| Technology                | Purpose                      |
-| ------------------------- | ---------------------------- |
-| Python 3.14               | Application runtime          |
-| Flask 3.1.2               | Web framework                |
-| Pytest                    | Automated testing            |
-| Docker                    | Application containerization |
-| Git                       | Version control              |
-| GitHub                    | Source code hosting          |
-| GitHub Actions            | CI/CD automation             |
-| GitHub Container Registry | Docker image storage         |
-| Ubuntu / WSL              | Development environment      |
+| Technology                | Purpose                        |
+| ------------------------- | ------------------------------ |
+| Python 3.14               | Application runtime            |
+| Flask 3.1.2               | Web framework                  |
+| Pytest                    | Automated testing              |
+| Docker                    | Application containerization   |
+| Git                       | Version control                |
+| GitHub                    | Source code hosting            |
+| GitHub Actions            | CI/CD and deployment automation|
+| GitHub Container Registry | Docker image storage           |
+| AWS EC2                   | Cloud application hosting      |
+| SSH                       | Secure remote deployment       |
+| Ubuntu / WSL              | Development environment        |
 
 ---
 
 ## 📁 Project Structure
-
-```text
 docker-cicd-app/
 │
 ├── .github/
@@ -110,14 +120,17 @@ docker-cicd-app/
 │   ├── dockerlogs.png
 │   ├── dockerps.png
 │   ├── flaskupandrunning.png
+│   ├── githubworkflows.png
 │   ├── healthcheckconfirmed.png
+│   ├── sshsuccessful.png
+│   ├── successfulcicd.png
 │   └── successfulpytest.png
 │
 ├── .gitignore
 ├── Dockerfile
+├── LICENSE
 ├── pytest.ini
-└── README.md
-```
+└── README.md```
 
 ---
 
@@ -132,11 +145,9 @@ GET /
 ```
 
 Returns:
-
 ```text
-Hello from CI/CD and Docker applications!
+Hello from automated CI/CD deployment from AWS EC2!
 ```
-
 ### Health Check
 
 ```text
@@ -176,7 +187,7 @@ def test_home_route():
     response = client.get("/")
 
     assert response.status_code == 200
-    assert response.data.decode() == "Hello from CI/CD and Docker applications!"
+    assert response.data.decode() == "Hello from automated CI/CD deployment from AWS EC2!"
 
 
 def test_health_check():
@@ -186,6 +197,11 @@ def test_health_check():
     assert response.status_code == 200
     assert response.json == {"status": "healthy"}
 ```
+During the final deployment test, changing the application's home response caused the existing test to fail because it still expected the previous response.
+
+Since the deployment job depends on the test job, GitHub Actions automatically prevented the updated application from being deployed until the test was corrected and passed successfully.
+
+This demonstrated the role of automated testing as a deployment gate within the CI/CD pipeline.
 
 Running:
 
@@ -402,33 +418,163 @@ The image was successfully pulled from GHCR and run locally, confirming that the
 
 ---
 
-# 🔄 9. End-to-End Verification
+# ☁️ 9. AWS EC2 Deployment
 
-The final workflow was tested from beginning to end:
+The Dockerized application was deployed to an **AWS EC2 instance** running Ubuntu 26.04 LTS.
 
-```text
-Git push
-   ↓
-GitHub Actions triggered
-   ↓
-Automated tests passed
-   ↓
-Docker image built
-   ↓
-Docker image pushed to GHCR
-   ↓
-Image pulled from GHCR
-   ↓
-Container started
-   ↓
-Flask application accessed
-   ↓
-Health endpoint verified
+The EC2 instance was configured with:
+
+* Ubuntu 26.04 LTS
+* `t3.micro` instance type
+* Docker Engine
+* SSH access using an EC2 key pair
+* A security group allowing:
+  * SSH traffic on port `22`
+  * Application traffic on port `5000`
+
+Docker was installed directly on the EC2 instance using Docker's official Ubuntu repository.
+
+The application image was then pulled from GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/benitaadakeja/docker-cicd-app:latest
 ```
 
-Both application endpoints were successfully tested after pulling the image from GHCR.
+The container was initially started manually to verify that the application worked correctly on the server:
 
-This confirmed that the complete CI/CD workflow was functioning as intended.
+```bash
+docker run -d \
+  --name docker-cicd-app \
+  -p 5000:5000 \
+  ghcr.io/benitaadakeja/docker-cicd-app:latest
+```
+
+The application was first verified from inside the EC2 instance using:
+
+```bash
+curl http://localhost:5000
+```
+
+It was then successfully accessed externally through the EC2 instance's public IP address on port `5000`.
+
+# 🔐 10. SSH Deployment Authentication
+
+A dedicated SSH key pair was created specifically for GitHub Actions deployment.
+
+This kept automated deployment access separate from the personal EC2 SSH key used for manual administration.
+
+The deployment public key was added to the EC2 instance's:
+
+```text
+~/.ssh/authorized_keys
+```
+
+The corresponding private key was stored securely as a GitHub repository secret.
+
+The following repository secrets were configured:
+
+```text
+EC2_SSH_PRIVATE_KEY
+EC2_HOST
+EC2_USER
+```
+
+GitHub Actions uses these values to authenticate with the EC2 instance without storing the private SSH key directly in the repository or workflow file.
+
+### Successful SSH Connection
+
+![Successful GitHub Actions SSH connection](images/sshsuccessful.png)
+
+# 🚀 11. Automated Deployment to EC2
+
+The GitHub Actions workflow was extended with a dedicated `deploy` job that runs only after the CI job completes successfully.
+
+The dependency is configured using:
+
+```yaml
+deploy:
+  needs: test
+```
+
+This ensures that a failed test prevents the application from being deployed.
+
+The deployment job:
+
+1. Configures the SSH private key on the GitHub Actions runner
+2. Adds the EC2 host to the runner's known hosts
+3. Connects to the EC2 instance through SSH
+4. Pulls the latest Docker image from GHCR
+5. Stops the currently running application container
+6. Removes the old container
+7. Starts a new container using the latest image
+
+The deployment commands executed remotely on EC2 are:
+
+```bash
+docker pull ghcr.io/benitaadakeja/docker-cicd-app:latest
+docker stop docker-cicd-app || true
+docker rm docker-cicd-app || true
+docker run -d \
+  --name docker-cicd-app \
+  -p 5000:5000 \
+  ghcr.io/benitaadakeja/docker-cicd-app:latest
+```
+
+The `|| true` statements allow the deployment to continue if an existing container is already stopped or does not exist.
+
+### Successful CI/CD Workflow
+
+![Successful GitHub Actions CI/CD workflow](images/githubworkflows.png)
+
+# 🌍 12. End-to-End Deployment Verification
+
+The completed pipeline was tested by changing the Flask application's home response and pushing the change to the `main` branch.
+
+The first deployment attempt was automatically blocked because the existing test still expected the previous application response. After updating the test and pushing the correction, the complete pipeline ran successfully.
+
+The final workflow was:
+
+```text
+Code change
+     ↓
+Git push to main
+     ↓
+GitHub Actions triggered
+     ↓
+Automated tests
+     ↓
+Tests must pass
+     ↓
+Docker image built
+     ↓
+Image pushed to GHCR
+     ↓
+Deployment job started
+     ↓
+SSH connection to AWS EC2
+     ↓
+Latest image pulled
+     ↓
+Old container stopped and removed
+     ↓
+New container started
+     ↓
+Updated application available on port 5000
+```
+
+The updated application response was:
+
+```text
+Hello from automated CI/CD deployment from AWS EC2!
+```
+
+The new version became available on the EC2-hosted application without manually connecting to the server to perform the deployment.
+
+### Successful Automated Deployment
+
+![Successfully deployed application on AWS EC2](images/successfulcicd.png)
+
+This confirmed that a successful `git push` could trigger the complete CI/CD process from automated testing through cloud deployment.
 
 ---
 
@@ -454,22 +600,35 @@ Through this project, I gained hands-on experience with:
 * Secure authentication with `GITHUB_TOKEN`
 * Publishing and pulling container images
 * End-to-end CI/CD verification
+* Launching and configuring an AWS EC2 instance
+* Connecting securely to EC2 using SSH
+* Installing and configuring Docker on a cloud server
+* Deploying Docker images from GHCR to EC2
+* Managing EC2 security group rules
+* Creating a dedicated SSH key for automated deployments
+* Managing deployment credentials with GitHub Secrets
+* Creating dependent jobs in GitHub Actions using `needs`
+* Using automated tests as a deployment gate
+* Running Docker commands remotely through GitHub Actions
+* Automatically replacing running containers with updated images
+* Building an end-to-end CI/CD pipeline from Git push to cloud deployment
 
 ---
-
 # 🚀 Future Improvements
 
 Possible improvements to this project include:
 
 * Use a production WSGI server such as Gunicorn
 * Add more comprehensive application tests
-* Add Docker image versioning based on Git commits or releases
-* Add a dedicated deployment environment
-* Deploy the container to a cloud platform
-* Add vulnerability scanning for the Docker image
-* Add separate CI and CD jobs
-* Add deployment notifications
-
+* Add Docker image versioning based on Git commit SHA or releases
+* Add Docker image vulnerability scanning
+* Configure HTTPS with a domain name and reverse proxy
+* Implement zero-downtime or rolling deployments
+* Add automated deployment rollback if a new container fails
+* Add deployment health checks before considering a release successful
+* Pin and verify the EC2 SSH host key instead of relying on `ssh-keyscan`
+* Use a more secure deployment approach that avoids exposing SSH port `22` broadly to GitHub-hosted runners
+* Add deployment notifications and monitoring
 ---
 
 ## 👩🏽‍💻 Author
@@ -485,6 +644,12 @@ GitHub: [@benitaadakeja](https://github.com/benitaadakeja)
 ## ⭐ Project Status
 
 **Completed ✅**
+## ⭐ Project Status
 
-The application has been tested, containerized, integrated with GitHub Actions, published to GitHub Container Registry, pulled successfully, and verified as a running container.
+**Completed ✅**
 
+The application has been tested, containerized, integrated with GitHub Actions, published to GitHub Container Registry, and deployed to AWS EC2.
+
+The completed CI/CD pipeline automatically tests changes, builds and publishes an updated Docker image, connects to the EC2 instance, pulls the latest image, and replaces the running container after successful pushes to the `main` branch.
+
+An end-to-end deployment test confirmed that application changes could move from a local `git push` to the live AWS-hosted application without requiring a manual deployment on the server.
