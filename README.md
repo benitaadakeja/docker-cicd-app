@@ -75,6 +75,7 @@ The project demonstrates the progression from local development and containeriza
                              │
                              ▼
                          Internet
+```
 ---
 
 ## 🛠️ Technologies Used
